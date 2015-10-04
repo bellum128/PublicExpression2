@@ -1,0 +1,87 @@
+#-------------------------------------------------------------------------------------#
+# PHXPlateSpawner --------------------------------------------------------------------#
+# By: bellum128-----------------------------------------------------------------------#
+# Desc: Spawns a PHX plate of a given size from chat.---------------------------------#
+#-------------------------------------------------------------------------------------#
+
+@name PHXPlateSpawner By: bellum128
+@persist F:string L1 L2 Model:string Qty Sep OrigPos:vector SpawnPos:vector Rot
+@model models/hunter/blocks/cube025x025x025.mdl
+interval(150)
+runOnChat(1)
+
+if(first())
+{
+    hint("PHX Prop Spawner; By: bellum128", 10)
+    hint("Usage: Type /<length>x<width> [quantity] in chat to request a prop of the given size.", 10)
+    hint("Usage: Type /remove in chat to remove this E2.", 10)
+    OrigPos = entity():pos()
+    Sep = 5
+    Rot = 0
+}
+
+if(!first() && (lastSpoke() == entity():owner()) && chatClk())
+{
+    if(lastSaid():find("/remove") == 1)
+    {
+        hideChat(1)
+        print("Removing Prop Spawner E2!")
+        selfDestruct()
+    }
+    elseif(lastSaid():find("/") == 1)
+    {
+        hideChat(1)
+        F = lastSaid():explode("/")[2, string]
+        L1 = F:explode("x")[1, string]:toNumber()
+        if(F:explode("x")[2, string]:find(" "))
+        {
+            L2 = F:explode("x")[2, string]:sub(1, F:explode("x")[2, string]:find(" ")):toNumber()
+            Qty = F:explode(" ")[2, string]:toNumber()    
+        }
+        else
+        {
+            L2 = F:explode("x")[2, string]:toNumber()
+            Qty = 1   
+        }
+        
+        if((L1 > 0) && (L2 > 0) && (L1 <= 32) && (L2 <= 32))
+        {
+            SpawnPos = entity():owner():aimPos()
+            if(L1 > L2)
+            {
+                Model = "models/hunter/plates/plate" + L2 + "x" + L1  + ".mdl"    
+            }
+            else
+            {
+                Model = "models/hunter/plates/plate" + L1 + "x" + L2  + ".mdl"       
+            }
+            
+            print("Spawning: " + Model + " " + Qty + " times.")
+            soundPlay(1, 4, "garrysmod/save_load4.wav")
+            
+            for(I = 1, Qty)
+            {
+                propSpawn(Model, SpawnPos + vec(0,0, (Sep * I) + I),ang(0,0,0), 1)
+            }
+        }
+        else
+        {
+            print("Invalid model requested.")
+        }        
+    }
+}
+
+# Make the E2 look cool
+Rot += 4
+entity():setAng(ang(0,Rot,0))
+entity():setPos(OrigPos + vec(0,0,Rot % 8))
+
+if((Rot % 8) == 0)
+{
+    entity():setColor(255,128,128)
+}
+else
+{
+    entity():setColor(128,128,128)   
+}
+    
