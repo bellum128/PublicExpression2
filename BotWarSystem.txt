@@ -1,0 +1,175 @@
+#-------------------------------------------------------------------------------------#
+# Bot War System ---------------------------------------------------------------------#
+# By: bellum128-----------------------------------------------------------------------#
+# Desc: Makes two Source Bots in the server fight each other.-------------------------#
+#-------------------------------------------------------------------------------------#
+@name Bot War System
+@inputs ExternalActivation
+@outputs KDStr:string
+@persist Tick Weapon:string ResetHPPeriodically Chat WinningPhrases:array LosingPhrases:array
+@persist Bot1:entity Bot2:entity WinningPlayer:entity LosingPlayer:entity RespawnTimer Active
+@model models/props_vehicles/tire001a_tractor.mdl
+runOnChat(1)
+
+function resetRespawnTimer()
+{
+    RespawnTimer = 30
+}
+
+function printHelp()
+{
+    print("Bot War System by bellum128 - Help")
+    print("==================================")
+    print("Commands:")
+    print("   !weapon [weapon name] - Set weapon for the bots")
+    print("   !chat [1/0] - Enable or disable the bot's autochat")
+    print("   !active [1/0] - Enable or disable the Bot War System")
+    print("   !bot respawn - Respawn all bots")
+    print("   !bot help - Show this help screen.")
+}
+
+if(first())
+{
+    ResetHPPeriodically = 1
+    Active = 1
+    Chat = 1
+    Weapon = "m9k_rpg7"
+    Bot1 = findPlayerByName("Bot01")
+    Bot2 = findPlayerByName("Bot02")
+    WinningPhrases = array("ha, im winning!", "Take that!", "Yay", "haha", "lol")
+    LosingPhrases = array("oof", "dammit", "noo", "screw you!", ":/", "i want noclip")
+    printHelp()
+    resetRespawnTimer()
+
+    timer("update", 0)
+}
+
+if(ExternalActivation)
+{
+    Active = 1
+}
+
+if(chatClk())
+{
+    if(lastSpoke() == owner())
+    {
+        Command = lastSaid():match("!(.+) (.+)")
+
+        if(Command:count() > 0)
+        {
+            hideChat(1)
+            switch(Command[1, string])
+            {
+                case "weapon",
+                    Weapon = Command[2, string]
+                    print("Setting bot weapon to " + Weapon)
+                break
+                case "chat",
+                    Chat = Command[2, string]:toNumber()
+                    print("Chat " + (Chat ? "activated" : "deactivated"))
+                break
+                case "active",
+                    Active = Command[2, string]:toNumber()
+                    if(!Active)
+                    {
+                        concmd("evs strip bot")
+                    }
+                    print("Bot war system " + (Active ? "activated" : "deactivated"))
+                break
+                case "bot",
+                    switch(Command[2, string])
+                    {
+                        case "help",
+                            printHelp()
+                        break
+                        case "spawn",
+                        case "respawn",
+                            concmd("evs spawn bot")
+                            print("Respawning bots")
+                        break
+                    }
+                break
+                default,
+                    print("Invalid command!")
+                break
+            }
+        }
+    }
+}
+
+if(clk("update"))
+{
+    WinStr = "<==WINNING"
+    Bot1KD = round(Bot1:frags()/Bot1:deaths(), 3)
+    Bot2KD = round(Bot2:frags()/Bot2:deaths(), 3)
+
+    KDStr = "Bot1 KD: " + Bot1KD  + ((Bot1KD > Bot2KD) ? WinStr : "")
+    KDStr += "\nBot2 KD: " + Bot2KD + ((Bot1KD < Bot2KD) ? WinStr : "")
+
+    if(changed(Bot1KD) && changed(Bot2KD))
+    {
+        resetRespawnTimer()
+    }
+
+    if(Bot1KD > Bot2KD)
+    {
+        WinningPlayer = Bot1
+        LosingPlayer = Bot2
+    }
+    elseif(Bot1KD < Bot2KD)
+    {
+        WinningPlayer = Bot2
+        LosingPlayer = Bot1
+    }
+    else
+    {
+        WinningPlayer = LosingPlayer = noentity()
+    }
+
+    if(Active)
+    {
+        Tick++
+        RespawnTimer--
+        if(RespawnTimer == 0)
+        {
+            resetRespawnTimer()
+            concmd("evs spawn bot")
+            print("Respawning bots due to lack of action.")
+        }
+
+        if(Tick % 2 == 0)
+        {
+            concmd("ev rcon bot_attack 1")
+            if(Tick % 8 == 0 && ResetHPPeriodically)
+            {
+                concmd("evs hp bot 100")
+            }
+
+            if(WinningPlayer:isValid() && LosingPlayer:isValid())
+            {
+                if(Chat)
+                {
+                    if(random(0,100) < 10)
+                    {
+                        if(random(0,100) < 50) #Win Phrase
+                        {
+                            concmd("ev im " + WinningPlayer:name() + " " + WinningPhrases[random(1, WinningPhrases:count()), string])
+                        }
+                        else #Lose Phrase
+                        {
+                            concmd("ev im " + LosingPlayer:name() + " " + LosingPhrases[random(1, LosingPhrases:count()), string])
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+            concmd("evs strip bot")
+            concmd("evs give bot " + Weapon)
+            concmd("ev rcon bot_attack 0")
+        }
+    }
+
+    timer("update", 1000)
+}
