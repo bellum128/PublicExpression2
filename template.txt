@@ -1,0 +1,46 @@
+@name Template
+@inputs
+@outputs
+@persist ObjectList:table
+@trigger
+
+if(first() || duped())
+{
+    function initObject(Obj:string)
+    {
+        ObjectList[Obj, number] = ObjectList:count() + 1
+    }
+
+    function number getObject(Obj:string)
+    {
+        if(ObjectList[Obj, number])
+        {
+            return ObjectList[Obj, number]
+        }
+        else
+        {
+            initObject(Obj)
+            return getObject(Obj)
+        }
+    }
+
+    function init()
+    {
+        runOnTick(1)
+    }
+
+    function tick()
+    {
+
+    }
+}
+
+if(first() || dupefinished())
+{
+    init()
+}
+
+if(tickClk())
+{
+    tick()
+}
